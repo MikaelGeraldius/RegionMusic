@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import type { TrackerState } from './region/tracker';
-import type { Region } from './region/overpass';
+import type { Region } from './region/lookup';
 
 // Shared between the UI and the background location task.
 export type AppState = {

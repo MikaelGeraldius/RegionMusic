@@ -4,7 +4,8 @@
 An iOS + Android app that, while you walk or drive with the phone locked, detects which neighborhood/park (or, optionally, street) you're in and plays that place's music from your Spotify, switching smoothly when you cross into a new region - like towns and routes in old Pokemon games.
 
 ## Next Step
-User registers the Spotify developer app (redirect URI `regionmusic://callback`), puts the Client ID in `.env.local`, and makes a development build to field-test on a phone (see README.md).
+Locked-phone walk across a region border (Spotify open in background, RegionMusic battery saver = No restrictions), then a 1-hour battery check; then go/no-go for Phase 2.
+To resume: plug in the phone, `npx expo start --dev-client` (NOT with CI=1, it disables file watching), `adb reverse tcp:8081 tcp:8081`, open RegionMusic. Spotify login, Client ID (.env.local) and playlists are already set up on the phone.
 
 ## Current Phase
 Phase 2
@@ -28,7 +29,8 @@ Phase 2
 - [x] Background location task + Overpass kelurahan lookup + hysteresis tracker (code written; tracker unit-checked; Overpass checked live at Monas)
 - [x] Region switch -> Spotify Web API play playlist at hash-based start track (code written, not run)
 - [x] Typecheck, expo-doctor (20/20), native config has background location on iOS + Android
-- [ ] Development build installed on a phone (Android first)
+- [x] Development build installed on a phone (Android: Xiaomi POCO 22111317PG, local Gradle build, app loads)
+- [x] On device: location -> region (Nominatim) -> Spotify plays a playlist (Kalideres, 2026-10-30)
 - [ ] Field test: background location with screen locked, Spotify switches on border crossings
 - [ ] iOS: confirm background task stays alive and HTTP calls succeed while Spotify plays
 - [ ] Measure battery drain over a 1-hour walk
@@ -96,6 +98,14 @@ Phase 2
 ## Errors Encountered
 | Error | Resolution |
 |-------|------------|
+| On device: "Error: Overpass 406" | overpass-api.de rejects the default okhttp User-Agent (curl confirmed: okhttp/none -> 406, named UA -> 200); send `User-Agent: RegionMusic/0.1` |
+| Still 406 on device; then all Overpass servers (overpass-api.de, kumi, private.coffee) time out on TCP connect from the user's network, mail.ru 504 | Switched region lookup to Nominatim reverse (zoom 13 -> kelurahan relation, e.g. Gambir 5802247, Pondok Cina 14737184), reachable from this network; src/region/overpass.ts -> lookup.ts |
+| Phone kept running old code after edits (bundle had overpass-api.de, not nominatim) | Cause: Metro was started with `CI=1`, which turns off file watching. Start it without `CI=1`, and check the served bundle with curl after edits |
+| Walk: still only "Tracking started"; logcat showed task runs every ~7 s finishing in <10 ms | `busy` guard stuck: an earlier network call never returned (fetch has no timeout). Added fetchWithTimeout (15 s) for all requests; guard expires after 60 s |
+| After that: silent while standing still | Region cached within 75 m and unchanged = nothing logged. Start tracking now resets the remembered region so the current one plays immediately. Verified on device 23:52: Fix -> Kalideres, then Spotify reached ("no device") |
+| Still only "Tracking started" | dumpsys location: app's HIGH_ACCURACY GPS request pending indoors, so getCurrentPositionAsync(High) never resolved. First fix now = last known (<60 s) or Balanced (Wi-Fi/cell) |
+| On device: only "Tracking started", nothing after | Location updates only come after moving 25 m, and inaccurate/no-region fixes were silent. Now process the current position at start and log every lookup and skipped fix |
+| adb install: INSTALL_FAILED_USER_RESTRICTED (Xiaomi) | User turned on "Install via USB"; retry succeeded |
 | expo-doctor: duplicate expo-constants | `npm dedupe`; 20/20 checks pass |
 | git clone / npm in the app-made session folder failed (path redirected) | Moved the project to Desktop/MikaelStuff/Projects/RegionMusic |
 | Python edit of findings.md: FileNotFoundError | App folder is redirected for packaged apps; Python sees a different path. Use editor tools for files here. |

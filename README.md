@@ -19,7 +19,9 @@ Switching is instant for now. The "switch at song end" and Android fade modes co
    Under *User Management*, add the Spotify accounts that will test it. A Spotify **Premium** account is required.
 2. **Client ID**: copy `.env.example` to `.env.local` and set `EXPO_PUBLIC_SPOTIFY_CLIENT_ID`.
 3. **Development build**: background location doesn't work in Expo Go.
-   - Android, local: `npx expo run:android` with a phone connected over USB (needs Android Studio's JDK on `JAVA_HOME`).
+   - Android, local: `npx expo run:android` with a phone connected over USB. Needs JDK 17 on `JAVA_HOME` (`winget install Microsoft.OpenJDK.17`) and `ANDROID_HOME` pointing at the Android SDK. The first build takes about 25 minutes.
+     - Xiaomi/POCO/Redmi: also turn on **Install via USB** in Developer options, or the install fails with `INSTALL_FAILED_USER_RESTRICTED`.
+     - After the first install, `npx expo start` is enough. Over USB, run `adb reverse tcp:8081 tcp:8081` so the phone can reach the dev server.
    - Android or iOS, in the cloud: `npx eas-cli@latest build --profile development --platform android|ios` (needs a free Expo account; iOS also needs a paid Apple Developer account).
    - Then `npx expo start` and open the app on the phone.
 

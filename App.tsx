@@ -98,11 +98,14 @@ export default function App() {
   };
 
   const toggleTracking = async () => {
-    if (tracking) {
-      await stopTracking();
-    } else {
-      const err = await startTracking();
-      setMessage(err);
+    try {
+      if (tracking) {
+        await stopTracking();
+      } else {
+        setMessage(await startTracking());
+      }
+    } catch (e) {
+      setMessage(`Tracking error: ${(e as Error).message}`);
     }
     await refresh();
   };

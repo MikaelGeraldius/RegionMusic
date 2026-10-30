@@ -3,13 +3,15 @@ import * as TaskManager from 'expo-task-manager';
 
 import { LOCATION_TASK, TRACKING } from '../config';
 import { hash } from '../hash';
-import { distanceM, regionAt, type Region } from '../region/overpass';
+import { distanceM, regionAt, type Region } from '../region/lookup';
 import { step } from '../region/tracker';
 import { pickDevice, playlistLength, playPlaylist } from '../spotify/api';
 import { loadState, log, saveState } from '../storage';
 
-// Fixes can arrive while a slow Overpass/Spotify call is still running; drop them.
-let busy = false;
+// Fixes can arrive while a slow lookup/Spotify call is still running; drop them.
+// busySince is a timestamp so a stuck run can't block every later fix.
+let busySince: number | null = null;
+const BUSY_EXPIRE_MS = 60_000;
 
 // Must run at module load (imported from index.ts): the OS can start the app
 // in the background with no React components mounted.
@@ -21,21 +23,32 @@ TaskManager.defineTask<{ locations: Location.LocationObject[] }>(
       return;
     }
     const fix = data?.locations?.at(-1);
-    if (!fix || busy) return;
-    busy = true;
-    try {
-      await handleFix(fix);
-    } catch (e) {
-      await log(`Error: ${(e as Error).message}`);
-    } finally {
-      busy = false;
-    }
+    if (fix) await processFix(fix);
   },
 );
 
+async function processFix(fix: Location.LocationObject) {
+  if (busySince !== null) {
+    if (Date.now() - busySince < BUSY_EXPIRE_MS) return;
+    await log('Previous update took over 60 s; continuing anyway');
+  }
+  const started = Date.now();
+  busySince = started;
+  try {
+    await handleFix(fix);
+  } catch (e) {
+    await log(`Error: ${(e as Error).message}`);
+  } finally {
+    if (busySince === started) busySince = null;
+  }
+}
+
 async function handleFix(fix: Location.LocationObject) {
   const { latitude: lat, longitude: lon, accuracy } = fix.coords;
-  if (accuracy != null && accuracy > TRACKING.maxAccuracyM) return;
+  if (accuracy != null && accuracy > TRACKING.maxAccuracyM) {
+    await log(`Skipped fix: accuracy ${Math.round(accuracy)} m (need <= ${TRACKING.maxAccuracyM} m)`);
+    return;
+  }
 
   const state = await loadState();
 
@@ -46,6 +59,10 @@ async function handleFix(fix: Location.LocationObject) {
   } else {
     seen = await regionAt(lat, lon);
     state.lastQuery = { lat, lon, region: seen };
+    await log(
+      `Fix ${lat.toFixed(5)},${lon.toFixed(5)} ±${Math.round(accuracy ?? 0)} m -> ` +
+        (seen ? `${seen.name} (${seen.kind})` : 'no region'),
+    );
   }
 
   const result = step(state.tracker, seen, fix.timestamp, TRACKING);
@@ -81,6 +98,10 @@ export async function startTracking(): Promise<string | null> {
   const bg = await Location.requestBackgroundPermissionsAsync();
   if (bg.status !== 'granted') return 'Background location ("Allow all the time") denied';
 
+  // A force-stopped or reloaded app can leave a stale registration behind; start clean.
+  if (await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK)) {
+    await Location.stopLocationUpdatesAsync(LOCATION_TASK);
+  }
   await Location.startLocationUpdatesAsync(LOCATION_TASK, {
     accuracy: Location.Accuracy.High,
     distanceInterval: TRACKING.distanceIntervalM,
@@ -93,7 +114,24 @@ export async function startTracking(): Promise<string | null> {
       killServiceOnDestroy: false,
     },
   });
+  // Forget the previous region so the current one plays right away.
+  const state = await loadState();
+  state.tracker = { current: null, pending: null };
+  state.lastQuery = null;
+  await saveState(state);
   await log('Tracking started');
+
+  // Updates only arrive after moving distanceIntervalM, so handle where we are now.
+  // High accuracy can wait forever for GPS indoors; Balanced uses Wi-Fi/cell.
+  try {
+    await log('Getting current position...');
+    const here =
+      (await Location.getLastKnownPositionAsync({ maxAge: 60_000 })) ??
+      (await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }));
+    await processFix(here);
+  } catch (e) {
+    await log(`Current position failed: ${(e as Error).message}`);
+  }
   return null;
 }
 

@@ -1,4 +1,4 @@
-import type { Region } from './overpass';
+import type { Region } from './lookup';
 
 // Hysteresis so GPS jitter at a border doesn't flip the music back and forth:
 // a new region must be seen on `confirmFixes` fixes in a row spanning `confirmMs`.

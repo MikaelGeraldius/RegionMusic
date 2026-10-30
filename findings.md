@@ -56,6 +56,12 @@
 - No Expo API sets Android media volume, so the Android fade needs a third-party/native module -> deferred to Phase 4. Spike switches instantly.
 - Spike region source: Overpass `is_in(lat,lon)` returning the kelurahan (admin_level 7, fallback 6) containing the fix, queried only after moving >= 75 m. Overpass public servers are rate-limited; OK for a spike, replace with cached polygons in Phase 3.
 
+## On-device findings (2026-10-30, POCO 22111317PG)
+- overpass-api.de and other Overpass mirrors: TCP connect timeouts from the user's network; Overpass also returns 406 for Android's default okhttp User-Agent. Using Nominatim reverse (zoom 13) instead.
+- Nominatim zoom 13 isn't always kelurahan: at -6.12690,106.70445 it returned "Kalideres" with addresstype `municipality` (a kecamatan-level area), at Monas the kelurahan `neighbourhood` Gambir, near UI the `village` Pondok Cina. Phase 3 needs real polygons with explicit admin_level 7 to get consistent kelurahan.
+- Android high-accuracy GPS can stay unanswered indoors; use last known / Balanced for the first fix.
+- Spotify playback needs the Spotify app open as an active device ("no Spotify device" otherwise).
+
 ## Technical Decisions
 | Decision | Rationale |
 |----------|-----------|

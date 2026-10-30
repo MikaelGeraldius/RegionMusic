@@ -1,3 +1,4 @@
+import { fetchWithTimeout } from '../net';
 import { getAccessToken } from './auth';
 
 const API = 'https://api.spotify.com/v1';
@@ -11,7 +12,7 @@ export class SpotifyError extends Error {
 async function call(path: string, init: RequestInit = {}): Promise<any> {
   const token = await getAccessToken();
   if (!token) throw new SpotifyError(401, 'Not logged in to Spotify');
-  const res = await fetch(`${API}${path}`, {
+  const res = await fetchWithTimeout(`${API}${path}`, {
     ...init,
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
   });

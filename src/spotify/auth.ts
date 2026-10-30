@@ -1,6 +1,7 @@
 import * as SecureStore from 'expo-secure-store';
 
 import { SPOTIFY_CLIENT_ID, SPOTIFY_DISCOVERY } from '../config';
+import { fetchWithTimeout } from '../net';
 
 type StoredTokens = {
   accessToken: string;
@@ -34,7 +35,7 @@ export async function isLoggedIn(): Promise<boolean> {
 
 // Plain fetch instead of expo-auth-session so it also works in the background task.
 async function refresh(tokens: StoredTokens): Promise<StoredTokens> {
-  const res = await fetch(SPOTIFY_DISCOVERY.tokenEndpoint, {
+  const res = await fetchWithTimeout(SPOTIFY_DISCOVERY.tokenEndpoint, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
