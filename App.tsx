@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 
 import { isTracking, resumeMusic, startTracking, stopTracking } from './src/background/locationTask';
+import { DEMO, DEMO_REGION, DEMO_SONG, DEMO_VISITS } from './src/demo';
 import { nowPlaying } from './src/music/player';
 import { TRACKS } from './src/music/tracks.generated';
 import type { Region } from './src/region/lookup';
@@ -38,8 +39,16 @@ export default function App() {
   const [message, setMessage] = useState<string | null>(null);
   const [showLog, setShowLog] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [demoOn, setDemoOn] = useState(true);
 
   const refresh = useCallback(async () => {
+    if (DEMO) {
+      setTracking(demoOn);
+      setRegion(demoOn ? DEMO_REGION : null);
+      setSong(demoOn ? DEMO_SONG : null);
+      setVisits(DEMO_VISITS);
+      return;
+    }
     const state = await loadState();
     const on = await isTracking();
     setTracking(on);
@@ -52,7 +61,7 @@ export default function App() {
     setSong(current && latest?.name === current.name ? latest.song : nowPlaying());
     setVisits(visitList);
     setEntries(await readLog());
-  }, []);
+  }, [demoOn]);
 
   const start = useCallback(async () => {
     setBusy(true);
@@ -66,6 +75,10 @@ export default function App() {
   }, [refresh]);
 
   useEffect(() => {
+    if (DEMO) {
+      refresh();
+      return;
+    }
     // Autoplay: start as soon as the app opens.
     (async () => {
       if (await isTracking()) await resumeMusic();
@@ -77,6 +90,10 @@ export default function App() {
   }, [refresh, start]);
 
   const toggle = async () => {
+    if (DEMO) {
+      setDemoOn((on) => !on);
+      return;
+    }
     if (tracking) {
       setBusy(true);
       await stopTracking();
