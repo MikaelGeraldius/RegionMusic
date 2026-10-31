@@ -90,7 +90,7 @@ export default function App() {
 
   return (
     <View style={styles.screen}>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.header}>
           <Text style={[type.caption, styles.appName]}>REGIONMUSIC</Text>
@@ -160,7 +160,7 @@ export default function App() {
           ]}
         >
           <View style={tracking ? styles.stopIcon : styles.playIcon} />
-          <Text style={[type.body, styles.buttonText, { color: tracking ? color.ink : color.surface }]}>
+          <Text style={[type.body, styles.buttonText, { color: color.ink }]}>
             {busy ? 'One moment…' : tracking ? 'Stop music' : 'Start music'}
           </Text>
         </Pressable>
@@ -215,7 +215,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: space.m - 4,
   },
-  buttonStart: { backgroundColor: color.ink, shadowColor: color.ink, elevation: 4 },
+  buttonStart: { backgroundColor: color.primary, shadowColor: color.primaryShadow, elevation: 4 },
   buttonStop: { backgroundColor: color.surface, borderWidth: 1, borderColor: color.border },
   buttonText: { fontWeight: '600' },
   playIcon: {
@@ -226,7 +226,7 @@ const styles = StyleSheet.create({
     borderLeftWidth: 12,
     borderTopColor: 'transparent',
     borderBottomColor: 'transparent',
-    borderLeftColor: color.surface,
+    borderLeftColor: color.ink,
   },
   stopIcon: { width: 12, height: 12, borderRadius: 2, backgroundColor: color.ink },
 });

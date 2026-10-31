@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <title>RegionMusic - tall grass</title>
+  <path id="bg" d="M 601.62 0 c 147.85 0 221.77 0 278.24 28.77 a 263.99 263.99 0 0 1 115.37 115.37 c 28.77 56.47 28.77 130.39 28.77 278.24 L 1024 601.62 c 0 147.85 0 221.77 -28.77 278.24 a 263.99 263.99 0 0 1 -115.37 115.37 c -56.47 28.77 -130.39 28.77 -278.24 28.77 L 422.38 1024 c -147.85 0 -221.77 0 -278.24 -28.77 a 263.99 263.99 0 0 1 -115.37 -115.37 c -28.77 -56.47 -28.77 -130.39 -28.77 -278.24 L 0 422.38 c 0 -147.85 0 -221.77 28.77 -278.24 a 263.99 263.99 0 0 1 115.37 -115.37 c 56.47 -28.77 130.39 -28.77 278.24 -28.77 Z" fill="#2A2A2E"/>
+  <!-- A pixel tuft of tall grass; the music hides in it as a cut-out note. -->
+  <defs>
+    <g id="half">
+      <path d="M 224 800 L 224 448 L 256 448 L 256 384 L 288 384 L 288 448 L 320 448 L 320 512 L 352 512 L 352 352 L 384 352 L 384 288 L 416 288 L 416 352 L 448 352 L 448 448 L 480 448 L 480 800 Z"/>
+    </g>
+  </defs>
+  <g id="glyph" fill="#4CC38A">
+    <use href="#half"/>
+    <use href="#half" transform="translate(1024,0) scale(-1,1)"/>
+    <path d="M 480 800 L 480 256 L 496 256 L 496 192 L 528 192 L 528 256 L 544 256 L 544 800 Z"/>
+  </g>
+  <g id="note" fill="#2A2A2E" transform="translate(0,288)">
+    <rect x="448" y="256" width="192" height="48"/>
+    <rect x="448" y="256" width="32" height="176"/>
+    <rect x="608" y="256" width="32" height="176"/>
+    <rect x="352" y="416" width="128" height="48"/>
+    <rect x="384" y="400" width="96" height="80"/>
+    <rect x="512" y="416" width="128" height="48"/>
+    <rect x="544" y="400" width="96" height="80"/>
+  </g>
+</svg>
