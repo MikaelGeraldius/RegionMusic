@@ -38,6 +38,7 @@ A development build is needed: background location and `expo-audio` don't work i
 - Android, local: `npx expo run:android` with the phone connected over USB. Needs JDK 17 on `JAVA_HOME` and `ANDROID_HOME` pointing at the Android SDK. The first build takes about 25 minutes.
   - Xiaomi/POCO/Redmi: turn on **Install via USB** in Developer options, and set RegionMusic's battery saver to **No restrictions**.
   - After that, `npx expo start --dev-client` (not with `CI=1`) and `adb reverse tcp:8081 tcp:8081`.
+- Standalone Android build (no computer needed after install): `cd android && gradlew assembleRelease`, then `adb install -r android/app/build/outputs/apk/release/app-release.apk`. It embeds the code and the music, and is signed with the same debug key, so it installs over the development build and keeps your data. Rebuild it after every change.
 - iOS: `npx eas-cli@latest build --profile development --platform ios` (needs a paid Apple Developer account).
 
 When asked for location, choose **Allow all the time** / **Always**.
