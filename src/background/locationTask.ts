@@ -2,7 +2,7 @@ import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 
 import { LOCATION_TASK, TRACKING } from '../config';
-import { musicGeneration, playRegion, stopMusic } from '../music/player';
+import { musicGeneration, nowPlaying, playRegion, stopMusic } from '../music/player';
 import { distanceM, regionAt, type Region } from '../region/lookup';
 import { step } from '../region/tracker';
 import { loadState, log, saveState } from '../storage';
@@ -70,7 +70,13 @@ async function handleFix(fix: Location.LocationObject, maxAccuracyM: number) {
   state.tracker = result.state;
   await saveState(state);
 
-  if (result.switchedTo) await playRegion(result.switchedTo, generation);
+  if (result.switchedTo) {
+    await playRegion(result.switchedTo, generation);
+  } else if (state.tracker.current && !nowPlaying()) {
+    // Same area, but this JS runtime has no player: Android restarted the app
+    // in the background (or it was reloaded). Pick the theme back up.
+    await playRegion(state.tracker.current, generation, true);
+  }
 }
 
 export async function startTracking(): Promise<string | null> {
@@ -124,6 +130,12 @@ export async function stopTracking() {
   }
   stopMusic();
   await log('Tracking stopped');
+}
+
+// Called when the app opens while tracking is already on.
+export async function resumeMusic(): Promise<void> {
+  const state = await loadState();
+  if (state.tracker.current && !nowPlaying()) await playRegion(state.tracker.current, undefined, true);
 }
 
 export async function isTracking(): Promise<boolean> {

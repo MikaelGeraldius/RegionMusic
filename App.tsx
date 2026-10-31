@@ -10,7 +10,7 @@ import {
   View,
 } from 'react-native';
 
-import { isTracking, startTracking, stopTracking } from './src/background/locationTask';
+import { isTracking, resumeMusic, startTracking, stopTracking } from './src/background/locationTask';
 import { nowPlaying } from './src/music/player';
 import { TRACKS } from './src/music/tracks.generated';
 import type { Region } from './src/region/lookup';
@@ -68,7 +68,8 @@ export default function App() {
   useEffect(() => {
     // Autoplay: start as soon as the app opens.
     (async () => {
-      if (!(await isTracking())) await start();
+      if (await isTracking()) await resumeMusic();
+      else await start();
       await refresh();
     })();
     const timer = setInterval(refresh, 2000);

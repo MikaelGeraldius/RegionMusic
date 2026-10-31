@@ -40,7 +40,12 @@ export function trackFor(region: Region): Track | null {
   return pool.length ? pool[hash(region.id) % pool.length] : null;
 }
 
-export async function playRegion(region: Region, generation = music.generation): Promise<void> {
+// resume: restart the current area's theme without counting it as a new visit.
+export async function playRegion(
+  region: Region,
+  generation = music.generation,
+  resume = false,
+): Promise<void> {
   // Stop was pressed while this area was being looked up.
   if (generation !== music.generation) return;
   const track = trackFor(region);
@@ -77,6 +82,10 @@ export async function playRegion(region: Region, generation = music.generation):
   await crossfade(previous?.player ?? null, next, generation);
   if (generation !== music.generation) return; // stopped mid-fade; stopMusic removed both
   if (previous) release(previous.player);
+  if (resume) {
+    await log(`Resumed ${region.name} -> ${track.title}`);
+    return;
+  }
   await recordVisit({ t: Date.now(), name: region.name, kind: region.kind, song: track.title });
   await log(`Entered ${region.name} (${KIND_LABEL[region.kind]}) -> ${track.title}`);
 }

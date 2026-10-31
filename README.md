@@ -25,7 +25,11 @@ assets/music/town/    e.g. "Littleroot Town.mp3", "Oldale Town.mp3", "Fallarbor 
 assets/music/route/   e.g. "Route 101.mp3", "Route 104.mp3", "Route 119.mp3"
 ```
 
-The file name becomes the song title, and a leading track number is dropped. Then run `npm run music`, which regenerates `src/music/tracks.generated.ts`. `npm start`, `npm run android` and `npm run ios` also run it. Both the folder and the generated file are git-ignored.
+The file name becomes the song title, and a leading track number is dropped.
+
+Game rips usually play the loop twice and then fade out. To make them loop endlessly with no fade, run `python scripts/loop-music.py --ffmpeg <path to ffmpeg>` (needs numpy and ffmpeg). It finds each track's loop, cuts exactly one pass and re-encodes it; the originals are kept in `assets/music/_originals/`, and re-running always starts from those.
+
+Then run `npm run music`, which regenerates `src/music/tracks.generated.ts`. `npm start`, `npm run android` and `npm run ios` also run it. Both the folder and the generated file are git-ignored.
 
 ## Running it
 
