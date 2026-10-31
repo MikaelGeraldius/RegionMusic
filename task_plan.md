@@ -1,10 +1,11 @@
 # Task Plan: Region-based music app ("every street has its theme")
 
 ## Goal
-An iOS + Android app that, while you walk or drive with the phone locked, detects which neighborhood/park (or, optionally, street) you're in and plays that place's music from your Spotify, switching smoothly when you cross into a new region - like towns and routes in old Pokemon games.
+An iOS + Android app that, while you walk or drive with the phone locked, detects what kind of place you're in and autoplays a Pokemon Emerald theme for it: malls/large buildings = city theme, housing complexes = town theme, everywhere else = route theme. Personal use only (2026-10-31: Spotify dropped; songs are the user's own audio files bundled in the app).
 
 ## Next Step
-Locked-phone walk across a region border (Spotify open in background, RegionMusic battery saver = No restrictions), then a 1-hour battery check; then go/no-go for Phase 2.
+User copies Emerald audio into assets/music/{city,town,route}/, then rebuild: `npm run android` (native modules changed: expo-audio added, Spotify/auth modules removed). Then open the app (tracking autostarts) and do the locked-phone walk below.
+Previously: locked-phone walk across a region border (Spotify open in background, RegionMusic battery saver = No restrictions), then a 1-hour battery check (read Android Settings > Battery > app usage for RegionMusic and Spotify; note start/end %); then go/no-go for Phase 2. Event log now keeps 300 entries, so a full walk fits.
 To resume: plug in the phone, `npx expo start --dev-client` (NOT with CI=1, it disables file watching), `adb reverse tcp:8081 tcp:8081`, open RegionMusic. Spotify login, Client ID (.env.local) and playlists are already set up on the phone.
 
 ## Current Phase
@@ -36,6 +37,9 @@ Phase 2
 - [ ] Measure battery drain over a 1-hour walk
 - [ ] Android volume fade -> moved to Phase 4 (needs a native volume module)
 - [ ] Go / no-go: stay on Expo or add native modules
+- [x] 2026-10-31 pivot: drop Spotify login; classify place as city/town/route (Nominatim zoom 18 + 15 with polygons); local Emerald music via expo-audio with autoplay + crossfade (code written, needs rebuild)
+- [ ] User copies Emerald audio files into assets/music/{city,town,route}/ and runs `npm run music`
+- [ ] Rebuild dev client (expo-audio is native), field-test locked-phone playback
 - **Status:** in_progress
 
 ### Phase 3: Region Engine
@@ -88,7 +92,9 @@ Phase 2
 | Local point-in-polygon, not OS geofences | Geofence limits (20 on iOS) and circle-only shapes |
 | OpenStreetMap via Overpass, fetched online + cached | Free, global; user wants online for now |
 | Hysteresis on region switches | GPS jitter would make music flap at borders |
-| No Pokemon/Nintendo music | Copyright |
+| ~~No Pokemon/Nintendo music~~ -> Emerald music, personal use, user supplies the files (2026-10-31) | User's own app; Claude doesn't download the songs |
+| Spotify dropped (2026-10-31); local playback with expo-audio | No login, full control: autoplay, looping, crossfade on both platforms |
+| Region kinds: city (mall / building >= 5000 m2), town (named residential complex), route (else, named by kelurahan) | User's mapping; Nominatim gives malls at zoom 18 and complexes at zoom 15 |
 | Spotify via Web API (not App Remote) | HTTPS calls work from the background location task |
 | Default transition: switch at song end | Only smooth option on iOS; Android adds a volume fade |
 | Scope: personal / small allowlisted group | Spotify dev-mode limits; public launch blocked without extended access |

@@ -1,35 +1,46 @@
 # RegionMusic
 
-Plays music from your Spotify based on the neighborhood you're in, like towns and routes in old Pokemon games. This is the **Phase 2 spike**: it proves that background location and Spotify control work together on a real phone.
+A personal app that plays Pokemon Emerald themes for where you are: a **city** theme inside malls and large buildings, a **town** theme inside housing complexes, and a **route** theme everywhere else. It keeps playing with the phone locked, and crossfades when you move into a new area.
 
-## How the spike works
+The songs aren't in this repo. Add your own audio files (see below).
+
+## How it works
 
 1. A background location task gets a GPS fix every ~25 m, with the phone locked.
-2. After moving 75 m or more, it asks OpenStreetMap (Overpass) which kelurahan (or, if none is mapped, kecamatan) you're in.
-3. A new region must show up on 2 fixes, at least 10 s apart, before the music switches, so GPS jitter at borders doesn't flip it.
-4. On a switch, it picks one of your playlists by hashing the region id (same place, same playlist and same starting song) and tells Spotify to play it.
-5. Everything is written to the on-screen event log.
+2. After moving 75 m or more, it asks OpenStreetMap (Nominatim) what's at that spot:
+   - inside a mall/department store, or a building of 5000 m² or more -> **city**
+   - inside a named residential area or a *komplek/perumahan/cluster* -> **town**
+   - anything else -> **route**, named after the kelurahan
+3. A new area must show up on 2 fixes, at least 10 s apart, before the music switches, so GPS jitter at borders doesn't flip it.
+4. The area's id picks a theme from that kind's folder, so the same place always plays the same song. Themes loop and crossfade over 2.5 s.
+5. Tracking and music start on their own when you open the app. Everything is written to the on-screen event log.
 
-Switching is instant for now. The "switch at song end" and Android fade modes come in Phase 4.
+## Adding the music
 
-## Setup
+Put audio files (`.mp3`, `.m4a`, `.aac` or `.wav`) in:
 
-1. **Spotify app**: at https://developer.spotify.com/dashboard, create an app that uses the **Web API**, and add this Redirect URI exactly:
-   `regionmusic://callback`
-   Under *User Management*, add the Spotify accounts that will test it. A Spotify **Premium** account is required.
-2. **Client ID**: copy `.env.example` to `.env.local` and set `EXPO_PUBLIC_SPOTIFY_CLIENT_ID`.
-3. **Development build**: background location doesn't work in Expo Go.
-   - Android, local: `npx expo run:android` with a phone connected over USB. Needs JDK 17 on `JAVA_HOME` (`winget install Microsoft.OpenJDK.17`) and `ANDROID_HOME` pointing at the Android SDK. The first build takes about 25 minutes.
-     - Xiaomi/POCO/Redmi: also turn on **Install via USB** in Developer options, or the install fails with `INSTALL_FAILED_USER_RESTRICTED`.
-     - After the first install, `npx expo start` is enough. Over USB, run `adb reverse tcp:8081 tcp:8081` so the phone can reach the dev server.
-   - Android or iOS, in the cloud: `npx eas-cli@latest build --profile development --platform android|ios` (needs a free Expo account; iOS also needs a paid Apple Developer account).
-   - Then `npx expo start` and open the app on the phone.
+```
+assets/music/city/    e.g. "Rustboro City.mp3", "Slateport City.mp3", "Lilycove City.mp3"
+assets/music/town/    e.g. "Littleroot Town.mp3", "Oldale Town.mp3", "Fallarbor Town.mp3"
+assets/music/route/   e.g. "Route 101.mp3", "Route 104.mp3", "Route 119.mp3"
+```
+
+The file name becomes the song title, and a leading track number is dropped. Then run `npm run music`, which regenerates `src/music/tracks.generated.ts`. `npm start`, `npm run android` and `npm run ios` also run it. Both the folder and the generated file are git-ignored.
+
+## Running it
+
+A development build is needed: background location and `expo-audio` don't work in Expo Go.
+
+- Android, local: `npx expo run:android` with the phone connected over USB. Needs JDK 17 on `JAVA_HOME` and `ANDROID_HOME` pointing at the Android SDK. The first build takes about 25 minutes.
+  - Xiaomi/POCO/Redmi: turn on **Install via USB** in Developer options, and set RegionMusic's battery saver to **No restrictions**.
+  - After that, `npx expo start --dev-client` (not with `CI=1`) and `adb reverse tcp:8081 tcp:8081`.
+- iOS: `npx eas-cli@latest build --profile development --platform ios` (needs a paid Apple Developer account).
+
+When asked for location, choose **Allow all the time** / **Always**.
 
 ## Field test checklist
 
-- Log in, paste 2-5 playlist links, tap **Save playlists**.
-- Open Spotify and play anything once, so the phone shows up as a Spotify device.
-- Tap **Start tracking** and choose **Allow all the time** / **Always**.
-- Lock the phone and walk or ride across a few kelurahan borders.
-- Check the event log: did each border crossing switch the music, and how long after?
+- Open the app; the banner should show your area and a theme should start.
+- Lock the phone and walk into a mall, a housing complex and back out to a road.
+- Check the event log: did each switch happen, and how long after?
 - Note battery use over about an hour.

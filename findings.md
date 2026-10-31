@@ -62,6 +62,19 @@
 - Android high-accuracy GPS can stay unanswered indoors; use last known / Balanced for the first fix.
 - Spotify playback needs the Spotify app open as an active device ("no Spotify device" otherwise).
 
+## Direction change (2026-10-31): personal app, local Pokemon Emerald music, no Spotify
+- User wants: Emerald town/city/route themes, no Spotify login, autoplay; malls/large buildings = city, complexes = town, everything else = route.
+- Songs are NOT downloaded by Claude; the user copies their own audio files into `assets/music/{city,town,route}/` (from a soundtrack/game they own).
+- **expo-audio (SDK 58)**: plugin `enableBackgroundPlayback` (default true; Android media-playback foreground service, iOS `audio` mode). `setAudioModeAsync({ shouldPlayInBackground: true, interruptionMode: 'doNotMix' })`. Android stops background audio after ~3 min unless `player.setActiveForLockScreen(true, metadata)` is called. `createAudioPlayer(source)` works outside React; free with `player.remove()`. Props `volume`, `loop`, `playing`; methods `play/pause/replace/seekTo`.
+- **Overpass** still unreachable from this network (2026-10-31: 3 servers TCP timeout, mail.ru 504). Stay on Nominatim.
+- **Nominatim reverse, tested 2026-10-31:**
+  - zoom 18 inside malls returns the mall: Grand Indonesia `shop/mall` way 974882100, Mall Taman Anggrek `shop/mall` way 156924651. Otherwise usually a road or nearby POI node (Pondok Indah -> a restaurant node), so check containment with `polygon_geojson=1`.
+  - zoom 15 returns named `landuse/residential` complexes (Pondok Indah relation 21320147, MultiPolygon), but often just an RW `city_block` (not a complex) or `place=suburb` (Alam Sutera).
+  - zoom 16/17 return roads only.
+  - `addressdetails=1` gives `village` (kelurahan, e.g. Pegadungan), `suburb` (kecamatan, Kalideres) -> route names.
+  - Inside malls zoom 18 usually returns a shop/restaurant node, not the mall (GI West Mall -> CoCo Ichibanya node). Fix: `/search?q=mall&bounded=1&viewbox=±0.003°` (has `boundingbox`, but `polygon_geojson` is ignored on search), filter by bbox, then `/lookup?osm_ids=W..&polygon_geojson=1` for outlines + point-in-polygon.
+  - Live results with the final classifier: GI inside -> city, GI gap between wings -> route Menteng, Taman Anggrek -> city, Pondok Indah Mall 1 -> city, Pondok Indah housing -> town, Summarecon Kelapa Gading -> town, Kalideres -> route Pegadungan, Alam Sutera (place=suburb) -> route. Citra Garden -> route (not mapped as a named area in OSM). 1-4 requests per lookup, ~1-4.5 s.
+
 ## Technical Decisions
 | Decision | Rationale |
 |----------|-----------|

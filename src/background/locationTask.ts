@@ -2,10 +2,9 @@ import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 
 import { LOCATION_TASK, TRACKING } from '../config';
-import { hash } from '../hash';
+import { musicGeneration, playRegion, stopMusic } from '../music/player';
 import { distanceM, regionAt, type Region } from '../region/lookup';
 import { step } from '../region/tracker';
-import { pickDevice, playlistLength, playPlaylist } from '../spotify/api';
 import { loadState, log, saveState } from '../storage';
 
 // Fixes can arrive while a slow lookup/Spotify call is still running; drop them.
@@ -27,7 +26,7 @@ TaskManager.defineTask<{ locations: Location.LocationObject[] }>(
   },
 );
 
-async function processFix(fix: Location.LocationObject) {
+async function processFix(fix: Location.LocationObject, maxAccuracyM = TRACKING.maxAccuracyM) {
   if (busySince !== null) {
     if (Date.now() - busySince < BUSY_EXPIRE_MS) return;
     await log('Previous update took over 60 s; continuing anyway');
@@ -35,7 +34,7 @@ async function processFix(fix: Location.LocationObject) {
   const started = Date.now();
   busySince = started;
   try {
-    await handleFix(fix);
+    await handleFix(fix, maxAccuracyM);
   } catch (e) {
     await log(`Error: ${(e as Error).message}`);
   } finally {
@@ -43,10 +42,12 @@ async function processFix(fix: Location.LocationObject) {
   }
 }
 
-async function handleFix(fix: Location.LocationObject) {
+async function handleFix(fix: Location.LocationObject, maxAccuracyM: number) {
+  // A lookup takes a few seconds; if Stop is pressed meanwhile, don't start music after it.
+  const generation = musicGeneration();
   const { latitude: lat, longitude: lon, accuracy } = fix.coords;
-  if (accuracy != null && accuracy > TRACKING.maxAccuracyM) {
-    await log(`Skipped fix: accuracy ${Math.round(accuracy)} m (need <= ${TRACKING.maxAccuracyM} m)`);
+  if (accuracy != null && accuracy > maxAccuracyM) {
+    await log(`Skipped fix: accuracy ${Math.round(accuracy)} m (need <= ${maxAccuracyM} m)`);
     return;
   }
 
@@ -69,27 +70,7 @@ async function handleFix(fix: Location.LocationObject) {
   state.tracker = result.state;
   await saveState(state);
 
-  if (result.switchedTo) await playRegion(result.switchedTo, state.playlists);
-}
-
-async function playRegion(region: Region, playlists: string[]) {
-  if (playlists.length === 0) {
-    await log(`Entered ${region.name} (no playlists set)`);
-    return;
-  }
-  const h = hash(region.id);
-  const playlistId = playlists[h % playlists.length];
-
-  const device = await pickDevice();
-  if (!device) {
-    await log(`Entered ${region.name}, but no Spotify device: open Spotify and play something once`);
-    return;
-  }
-  // Same place, same starting song.
-  const length = await playlistLength(playlistId);
-  const start = length ? h % length : 0;
-  await playPlaylist(playlistId, device.id, start);
-  await log(`Entered ${region.name} -> playlist ${playlistId} #${start + 1} on ${device.name}`);
+  if (result.switchedTo) await playRegion(result.switchedTo, generation);
 }
 
 export async function startTracking(): Promise<string | null> {
@@ -110,7 +91,7 @@ export async function startTracking(): Promise<string | null> {
     activityType: Location.ActivityType.Other,
     foregroundService: {
       notificationTitle: 'RegionMusic',
-      notificationBody: 'Playing music for where you are',
+      notificationBody: 'Playing the theme for where you are',
       killServiceOnDestroy: false,
     },
   });
@@ -128,7 +109,9 @@ export async function startTracking(): Promise<string | null> {
     const here =
       (await Location.getLastKnownPositionAsync({ maxAge: 60_000 })) ??
       (await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }));
-    await processFix(here);
+    // Indoors this is often a ~100 m Wi-Fi fix; good enough to start some music,
+    // and the next fix on the move replaces it.
+    await processFix(here, TRACKING.maxStartAccuracyM);
   } catch (e) {
     await log(`Current position failed: ${(e as Error).message}`);
   }
@@ -139,6 +122,7 @@ export async function stopTracking() {
   if (await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK)) {
     await Location.stopLocationUpdatesAsync(LOCATION_TASK);
   }
+  stopMusic();
   await log('Tracking stopped');
 }
 

@@ -39,3 +39,7 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Personal music files (not for the repo) and the list generated from them
+/assets/music/
+/src/music/tracks.generated.ts

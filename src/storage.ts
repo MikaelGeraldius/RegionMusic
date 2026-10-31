@@ -5,17 +5,15 @@ import type { Region } from './region/lookup';
 
 // Shared between the UI and the background location task.
 export type AppState = {
-  playlists: string[]; // Spotify playlist ids
   tracker: TrackerState;
   lastQuery: { lat: number; lon: number; region: Region | null } | null;
 };
 
 const STATE_KEY = 'app-state';
 const LOG_KEY = 'event-log';
-const MAX_LOG = 60;
+const MAX_LOG = 300; // enough for a 1-hour field walk
 
 export const emptyState = (): AppState => ({
-  playlists: [],
   tracker: { current: null, pending: null },
   lastQuery: null,
 });
@@ -44,4 +42,20 @@ export async function readLog(): Promise<LogEntry[]> {
 
 export async function clearLog(): Promise<void> {
   await AsyncStorage.removeItem(LOG_KEY);
+}
+
+// Areas entered, newest first, for the journey list on the screen.
+export type Visit = { t: number; name: string; kind: Region['kind']; song: string };
+const VISITS_KEY = 'visits';
+const MAX_VISITS = 50;
+
+export async function recordVisit(visit: Visit): Promise<void> {
+  const visits = await readVisits();
+  visits.unshift(visit);
+  await AsyncStorage.setItem(VISITS_KEY, JSON.stringify(visits.slice(0, MAX_VISITS)));
+}
+
+export async function readVisits(): Promise<Visit[]> {
+  const raw = await AsyncStorage.getItem(VISITS_KEY);
+  return raw ? JSON.parse(raw) : [];
 }
